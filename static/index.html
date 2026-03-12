@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SPIR Extraction Tool v9</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F0F4F8;--surface:#FFFFFF;--border:#D1D9E0;--border2:#E8EDF2;
+  --navy:#1F4E79;--navy2:#2E6CA6;--accent:#2E6CA6;
+  --green:#1E6B3C;--green-bg:#E8F5EE;
+  --yellow:#7F6000;--yellow-bg:#FFF9E6;--yellow-border:#F0D060;
+  --red:#C00000;--red-bg:#FDF0EE;--red-border:#F0B0A0;
+  --text:#1A2332;--muted:#5A6A7A;--muted2:#8A9BAB
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+
+header{background:var(--navy);padding:0;border-bottom:3px solid var(--navy2)}
+.hdr-inner{display:flex;align-items:center;gap:16px;padding:20px 24px;max-width:960px;margin:0 auto}
+.logo{width:44px;height:44px;background:rgba(255,255,255,.15);border-radius:10px;
+  display:grid;place-items:center;font-family:'JetBrains Mono',monospace;
+  font-weight:700;font-size:18px;color:#fff;flex-shrink:0}
+.hdr-text h1{font-size:19px;font-weight:700;color:#fff;letter-spacing:-.01em}
+.hdr-text p{font-size:11px;color:rgba(255,255,255,.65);margin-top:3px;letter-spacing:.03em}
+.ver{margin-left:auto;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
+  color:rgba(255,255,255,.85);font-size:10px;padding:3px 10px;border-radius:4px;
+  font-family:'JetBrains Mono',monospace;white-space:nowrap}
+
+main{padding:32px 0 80px}
+
+.stepper{display:flex;align-items:center;background:var(--surface);
+  border:1px solid var(--border);border-radius:10px;padding:16px 24px;
+  margin-bottom:24px;gap:4px}
+.step{display:flex;align-items:center;gap:10px;flex:1}
+.s-line{flex:1;height:1px;background:var(--border2);transition:background .3s;margin:0 6px}
+.s-line.done{background:var(--navy2)}
+.s-num{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--border);
+  display:grid;place-items:center;font-size:11px;font-weight:600;
+  color:var(--muted);background:var(--bg);flex-shrink:0;transition:all .3s}
+.step.active .s-num{border-color:var(--navy);background:var(--navy);color:#fff}
+.step.done .s-num{border-color:var(--navy2);background:var(--navy2);color:#fff}
+.s-lbl{font-size:11px;font-weight:500;color:var(--muted);letter-spacing:.02em}
+.step.active .s-lbl,.step.done .s-lbl{color:var(--text)}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:28px;margin-bottom:20px}
+.card-title{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:20px;display:flex;align-items:center;gap:8px}
+.card-title::before{content:'';width:3px;height:14px;background:var(--navy);
+  border-radius:2px;flex-shrink:0}
+
+.drop-zone{border:2px dashed var(--border);border-radius:8px;
+  padding:48px 32px;text-align:center;cursor:pointer;transition:all .25s}
+.drop-zone:hover,.drop-zone.over{border-color:var(--navy2);background:#F5F8FC}
+.drop-icon{font-size:40px;margin-bottom:14px;display:block;opacity:.7}
+.drop-zone h3{font-size:15px;font-weight:600;margin-bottom:6px}
+.drop-zone p{font-size:12px;color:var(--muted);line-height:1.6}
+.drop-zone input{display:none}
+.fmt-pills{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.fpill{background:#EEF4FB;border:1px solid #C3D8EF;color:var(--navy2);
+  font-size:10px;font-weight:500;padding:3px 10px;border-radius:20px}
+
+.file-sel{display:none;align-items:center;gap:14px;
+  background:#F0F7FF;border:1px solid #C3D8EF;border-radius:8px;
+  padding:14px 18px;margin-top:14px}
+.file-sel.show{display:flex;animation:slideIn .25s ease}
+@keyframes slideIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.fi-info{flex:1}
+.fi-info strong{display:block;font-size:12.5px;color:var(--navy);font-weight:600}
+.fi-info span{font-size:10.5px;color:var(--muted)}
+.check-icon{color:#1E6B3C;font-size:16px;font-weight:700}
+
+.btn-go{width:100%;padding:13px;margin-top:18px;background:var(--navy);
+  border:none;border-radius:8px;color:#fff;
+  font-family:'Inter',sans-serif;font-size:13px;font-weight:600;
+  cursor:pointer;letter-spacing:.02em;transition:all .2s}
+.btn-go:disabled{opacity:.4;cursor:not-allowed}
+.btn-go:not(:disabled):hover{background:var(--navy2)}
+
+.prog-area{display:none;margin-top:18px}
+.prog-area.show{display:block}
+.prog-row{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:7px}
+.prog-track{height:4px;background:var(--border2);border-radius:4px;overflow:hidden}
+.prog-bar{height:100%;background:var(--navy);width:0%;transition:width .4s ease}
+.logs{margin-top:12px;max-height:100px;overflow-y:auto}
+.log{padding:3px 0 3px 10px;border-left:2px solid var(--border2);
+  font-size:10.5px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-bottom:2px}
+.log.ok{border-color:#1E6B3C;color:#1E6B3C}
+.log.err{border-color:#C00000;color:#C00000}
+.log.info{border-color:var(--navy2);color:var(--navy2)}
+
+.err-box{display:none;align-items:center;gap:10px;
+  background:var(--red-bg);border:1px solid var(--red-border);
+  border-radius:8px;padding:12px 16px;font-size:11.5px;color:var(--red);margin-top:14px}
+.err-box.show{display:flex}
+
+.sum-sec,.dl-sec{display:none}
+.sum-sec.show,.dl-sec.show{display:block;animation:slideIn .3s ease}
+
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:22px}
+.stat{background:var(--bg);border:1px solid var(--border);border-radius:8px;
+  padding:16px 14px;border-top:3px solid var(--navy)}
+.stat:nth-child(2){border-top-color:#2E6CA6}
+.stat:nth-child(3){border-top-color:#1E6B3C}
+.stat:nth-child(4){border-top-color:#B07D00}
+.stat:nth-child(5){border-top-color:#C00000}
+.stat:nth-child(6){border-top-color:#5A3B8C}
+.stat-v{font-size:24px;font-weight:700;line-height:1;margin-bottom:5px;color:var(--text)}
+.stat-l{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+
+.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px}
+.meta-item{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.meta-k{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--muted);display:block;margin-bottom:4px}
+.meta-v{font-size:12px;color:var(--text);word-break:break-word;line-height:1.4}
+.badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:10.5px;font-weight:500}
+.badge-navy{background:#EEF4FB;border:1px solid #C3D8EF;color:var(--navy2)}
+.badge-green{background:var(--green-bg);border:1px solid #A8D8BC;color:var(--green)}
+.badge-yellow{background:var(--yellow-bg);border:1px solid var(--yellow-border);color:var(--yellow)}
+.badge-red{background:var(--red-bg);border:1px solid var(--red-border);color:var(--red)}
+
+.ann-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.ann-tag{background:#EEF4FB;border:1px solid #C3D8EF;border-radius:6px;
+  padding:4px 12px;font-size:11px;display:flex;align-items:center;gap:8px;color:var(--navy2)}
+.ann-n{font-weight:700}
+
+.tbl-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:10.5px}
+thead th{background:#EEF4FB;border-bottom:2px solid #C3D8EF;
+  padding:9px 12px;text-align:left;font-size:9.5px;font-weight:600;
+  letter-spacing:.05em;text-transform:uppercase;color:var(--navy);white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--border2)}
+tbody tr:hover{background:#F8FAFC}
+tbody td{padding:8px 12px;color:var(--text);max-width:180px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+td.td-dup{color:var(--yellow);font-weight:600}
+td.td-sap{color:var(--red);font-weight:600}
+td.td-spir{color:var(--navy);font-weight:500}
+.tbl-more{text-align:center;padding:9px;color:var(--muted);
+  font-size:10px;border-top:1px solid var(--border2)}
+
+.dl-card{background:linear-gradient(135deg,#EEF4FB,#F0F7F4);
+  border:1px solid #C3D8EF;border-radius:10px;padding:36px;text-align:center}
+.dl-icon{font-size:48px;display:block;margin-bottom:16px;animation:bob 2.5s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.dl-card h3{font-size:18px;font-weight:700;margin-bottom:8px}
+.dl-card p{font-size:11.5px;color:var(--muted);margin-bottom:24px;line-height:1.6}
+.btn-dl{display:inline-flex;align-items:center;gap:8px;
+  padding:12px 32px;background:var(--navy);color:#fff;
+  font-family:'Inter',sans-serif;font-size:13px;font-weight:600;
+  border:none;border-radius:8px;cursor:pointer;text-decoration:none;
+  letter-spacing:.02em;transition:background .2s}
+.btn-dl:hover{background:var(--navy2)}
+.btn-rst{display:inline-flex;align-items:center;gap:6px;
+  padding:9px 20px;margin-top:14px;background:transparent;
+  color:var(--muted);font-family:'Inter',sans-serif;font-size:11.5px;
+  border:1px solid var(--border);border-radius:7px;cursor:pointer;transition:all .2s}
+.btn-rst:hover{color:var(--text);border-color:var(--muted)}
+
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:16px;padding-top:16px;border-top:1px solid var(--border2)}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--muted)}
+.leg-swatch{width:14px;height:14px;border-radius:3px;flex-shrink:0}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+</style>
+</head>
+<body>
+<header>
+  <div class="hdr-inner">
+    <div class="logo">SP</div>
+    <div class="hdr-text">
+      <h1>SPIR Extraction Tool</h1>
+      <p>SPARE PARTS &amp; INTERCHANGEABILITY RECORD · AUTOMATED EXTRACTION ENGINE</p>
+    </div>
+    <span class="ver">v9.0 · Enterprise</span>
+  </div>
+</header>
+
+<main>
+<div class="wrap">
+
+  <div class="stepper">
+    <div class="step active" id="s1"><div class="s-num" id="sn1">1</div><span class="s-lbl">Upload</span></div>
+    <div class="s-line" id="sl1"></div>
+    <div class="step" id="s2"><div class="s-num" id="sn2">2</div><span class="s-lbl">Process</span></div>
+    <div class="s-line" id="sl2"></div>
+    <div class="step" id="s3"><div class="s-num" id="sn3">3</div><span class="s-lbl">Review</span></div>
+    <div class="s-line" id="sl3"></div>
+    <div class="step" id="s4"><div class="s-num" id="sn4">4</div><span class="s-lbl">Download</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Upload SPIR File</div>
+    <div class="drop-zone" id="drop">
+      <span class="drop-icon">📂</span>
+      <h3>Drop your SPIR Excel file here</h3>
+      <p>Supports .xlsx and .xlsm · Format auto-detected on upload</p>
+      <div class="fmt-pills">
+        <span class="fpill">FORMAT 1 · Multi-Annexure (.xlsx)</span>
+        <span class="fpill">FORMAT 2 · Single-Sheet, 1 Tag (.xlsm)</span>
+        <span class="fpill">FORMAT 3 · Single-Sheet, Multi-Tag (.xlsm)</span>
+        <span class="fpill">FORMAT 4 · Matrix + Continuation Sheet (.xlsx)</span>
+        <span class="fpill">FORMAT 5 · Flag SPIR + Multi-Continuation (.xlsm)</span>
+      </div>
+      <input type="file" id="fi" accept=".xlsx,.xls,.xlsm">
+    </div>
+    <div class="file-sel" id="fsel">
+      <span style="font-size:22px">📊</span>
+      <div class="fi-info"><strong id="fname">—</strong><span id="fsize">—</span></div>
+      <span class="check-icon">✓</span>
+    </div>
+    <div class="err-box" id="errbox"><span>⚠</span><span id="errmsg"></span></div>
+    <button class="btn-go" id="pbtn" disabled onclick="go()">⚡ Extract SPIR Data</button>
+    <div class="prog-area" id="prog">
+      <div class="prog-row"><span id="plbl">Processing…</span><span id="ppct">0%</span></div>
+      <div class="prog-track"><div class="prog-bar" id="pb2"></div></div>
+      <div class="logs" id="logs"></div>
+    </div>
+  </div>
+
+  <div class="sum-sec" id="sumSec">
+    <div class="card">
+      <div class="card-title">Extraction Summary</div>
+      <div class="stat-grid" id="statGrid"></div>
+      <div class="meta-grid" id="metaGrid"></div>
+      <div class="card-title" id="annLabel" style="margin-top:4px">Sheet Breakdown</div>
+      <div class="ann-list" id="annList"></div>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-swatch" style="background:#D9E1F2;border:1px solid #B0BED0"></div>Equipment header row</div>
+        <div class="leg-item"><div class="leg-swatch" style="background:#FFF2CC;border:1px solid #F0D060"></div>Duplicate item</div>
+        <div class="leg-item"><div class="leg-swatch" style="background:#FCE4D6;border:1px solid #F0B0A0"></div>SAP Number Mismatch</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Data Preview <span style="font-size:10px;color:var(--muted2);font-weight:400;text-transform:none;letter-spacing:0">(first 12 rows)</span></div>
+      <div class="tbl-wrap">
+        <table><thead id="ph"></thead><tbody id="ptb"></tbody></table>
+      </div>
+      <div class="tbl-more" id="tblMore"></div>
+    </div>
+  </div>
+
+  <div class="dl-sec" id="dlSec">
+    <div class="card">
+      <div class="card-title">Download</div>
+      <div class="dl-card">
+        <span class="dl-icon">📥</span>
+        <h3>Extraction Complete</h3>
+        <p id="dlDesc">—</p>
+        <a id="dlnk" class="btn-dl" href="#">⬇ Download XLSX</a>
+        <br>
+        <button class="btn-rst" onclick="resetTool()">↺ Process another file</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+</main>
+
+<script>
+let sf=null;
+const drop=document.getElementById('drop'),fi=document.getElementById('fi');
+drop.addEventListener('click',()=>fi.click());
+drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('over')});
+drop.addEventListener('dragleave',()=>drop.classList.remove('over'));
+drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('over');if(e.dataTransfer.files[0])hf(e.dataTransfer.files[0])});
+fi.addEventListener('change',e=>{if(e.target.files[0])hf(e.target.files[0])});
+function hf(f){
+  if(!f.name.match(/\.(xlsx|xls|xlsm)$/i)){se('Please upload .xlsx or .xlsm');return}
+  ce();sf=f;
+  document.getElementById('fname').textContent=f.name;
+  document.getElementById('fsize').textContent=fb(f.size);
+  document.getElementById('fsel').classList.add('show');
+  document.getElementById('pbtn').disabled=false;
+}
+function fb(b){return b<1024?b+' B':b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(2)+' MB'}
+function se(m){document.getElementById('errmsg').textContent=m;document.getElementById('errbox').classList.add('show')}
+function ce(){document.getElementById('errbox').classList.remove('show')}
+function ss(n){
+  for(let i=1;i<=4;i++){
+    const s=document.getElementById('s'+i);s.classList.remove('active','done');
+    if(i<n)s.classList.add('done');if(i===n)s.classList.add('active');
+    if(i<4)document.getElementById('sl'+i).classList.toggle('done',i<n);
+  }
+}
+function lg(m,c='info'){const el=document.getElementById('logs'),d=document.createElement('div');d.className='log '+c;d.textContent='› '+m;el.appendChild(d);el.scrollTop=el.scrollHeight}
+function sp(p,l){document.getElementById('pb2').style.width=p+'%';document.getElementById('ppct').textContent=p+'%';document.getElementById('plbl').textContent=l}
+
+async function pollJob(jobId){
+  let attempts=0;
+  while(attempts<120){
+    await new Promise(r=>setTimeout(r,1500));
+    attempts++;
+    const r=await fetch('/status/'+jobId);
+    const d=await r.json();
+    if(d.status==='done'){sp(90,'Finalising…');return d.result||d;}
+    if(d.status==='failed')throw new Error(d.error||'Background job failed');
+    const p=Math.min(20+attempts*0.6,88);
+    sp(Math.round(p),'Processing… ('+d.message+')');
+    lg(d.message||'Processing…','info');
+  }
+  throw new Error('Timed out waiting for background job');
+}
+async function go(){
+  if(!sf)return;ce();ss(2);
+  document.getElementById('pbtn').disabled=true;
+  document.getElementById('prog').classList.add('show');
+  document.getElementById('logs').innerHTML='';
+  const fd=new FormData();fd.append('file',sf);
+  sp(10,'Uploading…');lg('Uploading: '+sf.name);
+  try{
+    const res=await fetch('/extract',{method:'POST',body:fd});
+    const d=await res.json();
+    if(!res.ok||d.error)throw new Error(d.error||'Server error');
+    // Handle background job (large files)
+    if(d.status==='queued'||d.status==='processing'){
+      lg('Large file — processing in background…','info');
+      sp(20,'Queued…');
+      const result = await pollJob(d.job_id);
+      Object.assign(d, result);
+    }
+    sp(100,'Done!');
+    lg('Format detected: '+d.format,'info');
+    lg('SPIR Type: '+(d.spir_type||'—'),'info');
+    lg('Tags found: '+d.total_tags,'info');
+    if(d.dup1_count>0)lg(d.dup1_count+' duplicate row(s) flagged','info');
+    if(d.sap_count>0)lg(d.sap_count+' SAP mismatch row(s) flagged','info');
+    lg(d.total_rows+' total rows extracted.','ok');
+    rs(d);
+    document.getElementById('sumSec').classList.add('show');
+    document.getElementById('dlSec').classList.add('show');
+    document.getElementById('dlnk').href='/download/'+d.file_id;
+    document.getElementById('dlnk').download=d.filename;
+    document.getElementById('dlDesc').textContent=
+      d.total_rows+' rows · '+d.spare_items+' spare items · '+d.total_tags+' tags · '+(d.spir_type||'—')+' · '+d.filename;
+    ss(4);
+  }catch(e){lg('ERROR: '+e.message,'err');se(e.message);ss(1);document.getElementById('pbtn').disabled=false}
+}
+function rs(d){
+  const d1=d.dup1_count,sm=d.sap_count;
+  document.getElementById('statGrid').innerHTML=`
+    <div class="stat"><div class="stat-v">${d.total_rows}</div><div class="stat-l">Output Rows</div></div>
+    <div class="stat"><div class="stat-v">${d.spare_items}</div><div class="stat-l">Spare Items</div></div>
+    <div class="stat"><div class="stat-v">${d.total_tags}</div><div class="stat-l">Eqpt Tags</div></div>
+    <div class="stat"><div class="stat-v">${d1}</div><div class="stat-l">Duplicates</div></div>
+    <div class="stat"><div class="stat-v">${sm}</div><div class="stat-l">SAP Mismatches</div></div>
+    <div class="stat"><div class="stat-v">${d.eqpt_qty||'—'}</div><div class="stat-l">Eqpt Qty</div></div>`;
+  const tv=d.spir_type?`<span class="badge badge-green">${d.spir_type}</span>`:'<span style="color:var(--muted)">—</span>';
+  const fv=`<span class="badge badge-navy">${d.format}</span>`;
+  const dv=d1>0?`<span class="badge badge-yellow">${d1} rows</span>`:'<span style="color:var(--green);font-size:11px;font-weight:600">✓ None</span>';
+  const sv=sm>0?`<span class="badge badge-red">${sm} rows</span>`:'<span style="color:var(--green);font-size:11px;font-weight:600">✓ None</span>';
+  document.getElementById('metaGrid').innerHTML=`
+    <div class="meta-item"><span class="meta-k">SPIR Number</span><div class="meta-v" style="color:var(--navy);font-weight:600">${d.spir_no||'—'}</div></div>
+    <div class="meta-item"><span class="meta-k">Format</span><div class="meta-v">${fv}</div></div>
+    <div class="meta-item"><span class="meta-k">SPIR Type</span><div class="meta-v">${tv}</div></div>
+    <div class="meta-item"><span class="meta-k">Duplicates (Type 1)</span><div class="meta-v">${dv}</div></div>
+    <div class="meta-item"><span class="meta-k">SAP Mismatch (Type 2)</span><div class="meta-v">${sv}</div></div>
+    <div class="meta-item"><span class="meta-k">Manufacturer</span><div class="meta-v">${d.manufacturer||'—'}</div></div>`;
+  const al=document.getElementById('annLabel'),aa=document.getElementById('annList');
+  if(!Object.keys(d.annexure_stats).length){al.style.display='none';aa.style.display='none'}
+  else{al.style.display='flex';aa.style.display='flex';
+    aa.innerHTML=Object.entries(d.annexure_stats).map(([k,v])=>`<div class="ann-tag"><span>${k}</span><span class="ann-n">${v} tags</span></div>`).join('')}
+  const PCOLS=['SPIR NO','TAG NO','EQPT MODEL','EQPT QTY','ITEM NUMBER','DESCRIPTION OF PARTS','NEW DESCRIPTION OF PARTS','MANUFACTURER PART NUMBER','SAP NUMBER','UNIT PRICE','DUPLICATE ID','SHEET'];
+  document.getElementById('ph').innerHTML='<tr>'+PCOLS.map(c=>`<th>${c}</th>`).join('')+'</tr>';
+  const ac=d.preview_cols,ix=PCOLS.map(c=>ac.indexOf(c));
+  const dupi=ac.indexOf('DUPLICATE ID'),spiri=ac.indexOf('SPIR NO');
+  document.getElementById('ptb').innerHTML=d.preview_rows.map(r=>'<tr>'+ix.map(i=>{
+    const v=r[i]??'';
+    if(i===dupi){
+      if(String(v).startsWith('Duplicate'))return`<td class="td-dup">${v}</td>`;
+      if(String(v)==='SAP NUMBER MISMATCH')return`<td class="td-sap">${v}</td>`;
+    }
+    if(i===spiri&&v)return`<td class="td-spir">${v}</td>`;
+    return`<td title="${v}">${v}</td>`;
+  }).join('')+'</tr>').join('');
+  const more=d.total_rows-12;
+  document.getElementById('tblMore').textContent=more>0?`+ ${more} more rows in the downloaded file`:'';
+}
+function resetTool(){
+  sf=null;fi.value='';
+  ['fsel','prog','sumSec','dlSec'].forEach(id=>document.getElementById(id).classList.remove('show'));
+  document.getElementById('pbtn').disabled=true;
+  document.getElementById('logs').innerHTML='';
+  document.getElementById('pb2').style.width='0%';
+  ce();ss(1);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SPIR Extraction Tool — Docker Compose Stack
+#
+# Services:
+#   redis   — message broker + result backend
+#   api     — FastAPI application (uvicorn, 4 workers)
+#   worker  — Celery background worker (handles large files)
+#   flower  — Celery task monitor UI  (http://localhost:5555)
+#
+# Usage:
+#   docker compose up --build          # start everything
+#   docker compose up --build api      # API only (no background processing)
+#   docker compose logs -f worker      # tail worker logs
+# ─────────────────────────────────────────────────────────────────────────────
+
+x-common-env: &common-env
+  REDIS_URL:       redis://redis:6379/0
+  CELERY_BROKER:   redis://redis:6379/0
+  CELERY_BACKEND:  redis://redis:6379/1
+  LOG_LEVEL:       INFO
+  DEBUG:           "false"
+  MAX_FILE_SIZE_MB: "100"
+  RESULT_TTL_SECONDS: "3600"
+
+services:
+
+  # ── Redis ─────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── FastAPI Application ───────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      target: production
+    image: spir-extraction:latest
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      <<: *common-env
+    volumes:
+      - uploads:/tmp/spir_uploads
+      - ./logs:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+
+  # ── Celery Worker ─────────────────────────────────────────────────────────
+  worker:
+    build:
+      context: .
+      target: worker
+    image: spir-extraction:latest
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+    volumes:
+      - uploads:/tmp/spir_uploads
+      - ./logs:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+    deploy:
+      replicas: 2        # scale workers independently
+      resources:
+        limits:
+          memory: 1G     # openpyxl can be memory-hungry on large files
+
+  # ── Flower (Celery Monitor) ───────────────────────────────────────────────
+  flower:
+    image: mher/flower:2.0
+    restart: unless-stopped
+    ports:
+      - "5555:5555"
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      FLOWER_PORT: 5555
+    depends_on:
+      - redis
+      - worker
+    profiles:
+      - monitoring    # only starts with: docker compose --profile monitoring up
+
+volumes:
+  redis_data:
+  uploads:
