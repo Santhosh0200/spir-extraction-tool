@@ -25,9 +25,15 @@ class Settings(BaseSettings):
     result_ttl_seconds: int = 3600    # how long to keep results in Redis
 
     # ── Redis / Celery ────────────────────────────────────────────────────────
-    redis_url: str      = "redis://localhost:6379/0"
-    celery_broker: str  = "redis://localhost:6379/0"
-    celery_backend: str = "redis://localhost:6379/1"
+    import os
+from pydantic_settings import BaseSettings
+
+
+class Settings(BaseSettings):
+    redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379")
+
+    celery_broker: str = redis_url
+    celery_backend: str = redis_url
 
     # ── CORS ──────────────────────────────────────────────────────────────────
     allowed_origins: list[str] = ["*"]   # tighten in production
