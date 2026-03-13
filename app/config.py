@@ -26,16 +26,21 @@ class Settings(BaseSettings):
 
     # ── Redis / Celery ────────────────────────────────────────────────────────
     import os
-    from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings
 
 
-    class Settings(BaseSettings):
-
-     redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379")
+class Settings(BaseSettings):
+    redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379")
 
     celery_broker: str = redis_url
     celery_backend: str = redis_url
 
+    class Config:
+        env_file = ".env"
+
+
+def get_settings():
+    return Settings()
 
 def get_settings():
     return Settings()
